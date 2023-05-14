@@ -35,16 +35,16 @@ public class JwtUtils {
 
   public ResponseCookie generateJwtCookie(UserDetailsImpl userPrincipal) {
     String jwt = generateTokenFromUsername(userPrincipal.getUsername());   
-    return generateCookie(jwtCookie, jwt, "/");
+    return generateCookie(jwtCookie, jwt);
   }
   
   public ResponseCookie generateJwtCookie(User user) {
     String jwt = generateTokenFromUsername(user.getUsername());
-    return generateCookie(jwtCookie, jwt, "/");
+    return generateCookie(jwtCookie, jwt);
   }
   
   public ResponseCookie generateRefreshJwtCookie(String refreshToken) {
-    return generateCookie(jwtRefreshCookie, refreshToken, "/auth/refreshtoken");
+    return generateCookie(jwtRefreshCookie, refreshToken);
   }
   
   public String getJwtFromCookies(HttpServletRequest request) {
@@ -60,7 +60,7 @@ public class JwtUtils {
   }
   
   public ResponseCookie getCleanJwtRefreshCookie() {
-    return ResponseCookie.from(jwtRefreshCookie, null).path("/auth/refreshtoken").build();
+    return ResponseCookie.from(jwtRefreshCookie, null).path("/").build();
   }
 
   public String getUserNameFromJwtToken(String token) {
@@ -95,9 +95,8 @@ public class JwtUtils {
         .compact();
   }
     
-  private ResponseCookie generateCookie(String name, String value, String path) {
-    ResponseCookie cookie = ResponseCookie.from(name, value).path(path).maxAge(24 * 60 * 60).httpOnly(true).build();
-    return cookie;
+  private ResponseCookie generateCookie(String name, String value) {
+    return ResponseCookie.from(name, value).path("/").maxAge(24 * 60 * 60).httpOnly(true).build();
   }
   
   private String getCookieValueByName(HttpServletRequest request, String name) {

@@ -2,6 +2,7 @@ package com.gabriel.iosefbinica.spring.security.jwt.controllers;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -10,7 +11,6 @@ import javax.validation.Valid;
 
 import com.gabriel.iosefbinica.spring.security.jwt.domains.RefreshToken;
 import com.gabriel.iosefbinica.spring.security.jwt.domains.Role;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -42,22 +42,11 @@ import com.gabriel.iosefbinica.spring.security.jwt.security.services.UserDetails
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
-    @Autowired
     AuthenticationManager authenticationManager;
-
-    @Autowired
     UserRepository userRepository;
-
-    @Autowired
     RoleRepository roleRepository;
-
-    @Autowired
     PasswordEncoder encoder;
-
-    @Autowired
     JwtUtils jwtUtils;
-
-    @Autowired
     RefreshTokenService refreshTokenService;
 
     @PostMapping("/signin")
@@ -143,7 +132,7 @@ public class AuthController {
     @PostMapping("/signout")
     public ResponseEntity<?> logoutUser() {
         Object principle = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        if (principle.toString() != "anonymousUser") {
+        if (!Objects.equals(principle.toString(), "anonymousUser")) {
             Long userId = ((UserDetailsImpl) principle).getId();
             refreshTokenService.deleteByUserId(userId);
         }
