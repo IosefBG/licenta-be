@@ -17,14 +17,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
 import com.gabriel.iosefbinica.spring.security.jwt.exception.TokenRefreshException;
 import com.gabriel.iosefbinica.spring.security.jwt.models.ERole;
 import com.gabriel.iosefbinica.spring.security.jwt.domains.User;
@@ -39,7 +38,7 @@ import com.gabriel.iosefbinica.spring.security.jwt.security.services.RefreshToke
 import com.gabriel.iosefbinica.spring.security.jwt.security.services.UserDetailsImpl;
 
 //@CrossOrigin(origins = "http://localhost:8081", maxAge = 3600, allowCredentials="true")
-@CrossOrigin(origins = "*", maxAge = 3600)
+//@CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -74,7 +73,7 @@ public class AuthController {
         ResponseCookie jwtCookie = jwtUtils.generateJwtCookie(userDetails);
 
         List<String> roles = userDetails.getAuthorities().stream()
-                .map(item -> item.getAuthority())
+                .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toList());
 
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(userDetails.getId());

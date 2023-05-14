@@ -3,7 +3,6 @@ package com.gabriel.iosefbinica.spring.security.jwt.security;
 import com.gabriel.iosefbinica.spring.security.jwt.security.jwt.AuthEntryPointJwt;
 import com.gabriel.iosefbinica.spring.security.jwt.security.jwt.AuthTokenFilter;
 import com.gabriel.iosefbinica.spring.security.jwt.security.services.UserDetailsServiceImpl;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -58,8 +57,8 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Collections.singletonList("http://localhost:4200"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE"));
-        configuration.setAllowedHeaders(Arrays.asList("authorization", "content-type", "x-auth-token"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("authorization", "content-type", "x-auth-token", "Set-Cookie"));
         configuration.setExposedHeaders(Collections.singletonList("x-auth-token"));
         configuration.setAllowCredentials(true); // allow credentials
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -82,7 +81,6 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
         http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
     }
-
 
 
     @Bean
