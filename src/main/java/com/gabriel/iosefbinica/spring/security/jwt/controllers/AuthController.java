@@ -11,6 +11,7 @@ import javax.validation.Valid;
 
 import com.gabriel.iosefbinica.spring.security.jwt.domains.RefreshToken;
 import com.gabriel.iosefbinica.spring.security.jwt.domains.Role;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -42,11 +43,17 @@ import com.gabriel.iosefbinica.spring.security.jwt.security.services.UserDetails
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
+    @Autowired
     AuthenticationManager authenticationManager;
+    @Autowired
     UserRepository userRepository;
+    @Autowired
     RoleRepository roleRepository;
+    @Autowired
     PasswordEncoder encoder;
+    @Autowired
     JwtUtils jwtUtils;
+    @Autowired
     RefreshTokenService refreshTokenService;
 
     @PostMapping("/signin")
@@ -110,7 +117,7 @@ public class AuthController {
 
                         break;
                     case "mod":
-                        Role modRole = roleRepository.findByName(ERole.ROLE_MODERATOR)
+                        Role modRole = roleRepository.findByName(ERole.ROLE_MANAGER)
                                 .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
                         roles.add(modRole);
 
@@ -131,19 +138,23 @@ public class AuthController {
 
     @PostMapping("/signout")
     public ResponseEntity<?> logoutUser() {
-        Object principle = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        if (!Objects.equals(principle.toString(), "anonymousUser")) {
-            Long userId = ((UserDetailsImpl) principle).getId();
-            refreshTokenService.deleteByUserId(userId);
+        try {
+            Object principle = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            if (!Objects.equals(principle.toString(), "anonymousUser")) {
+                Long userId = ((UserDetailsImpl) principle).getId();
+                refreshTokenService.deleteByUserId(userId);
+            }
+
+            ResponseCookie jwtCookie = jwtUtils.getCleanJwtCookie();
+            ResponseCookie jwtRefreshCookie = jwtUtils.getCleanJwtRefreshCookie();
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
+                    .header(HttpHeaders.SET_COOKIE, jwtRefreshCookie.toString())
+                    .body(new MessageResponse("You've been signed out!"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Error: " + e.getMessage()));
         }
-
-        ResponseCookie jwtCookie = jwtUtils.getCleanJwtCookie();
-        ResponseCookie jwtRefreshCookie = jwtUtils.getCleanJwtRefreshCookie();
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
-                .header(HttpHeaders.SET_COOKIE, jwtRefreshCookie.toString())
-                .body(new MessageResponse("You've been signed out!"));
     }
 
     @PostMapping("/refreshtoken")

@@ -1,7 +1,6 @@
 package com.gabriel.iosefbinica.spring.security.jwt.domains;
 
 import com.gabriel.iosefbinica.spring.security.jwt.models.ERole;
-
 import javax.persistence.*;
 
 @Entity
@@ -16,7 +15,6 @@ public class Role {
   private ERole name;
 
   public Role() {
-
   }
 
   public Role(ERole name) {
