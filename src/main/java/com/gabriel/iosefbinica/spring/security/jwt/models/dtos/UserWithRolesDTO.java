@@ -2,7 +2,6 @@ package com.gabriel.iosefbinica.spring.security.jwt.models.dtos;
 
 import com.gabriel.iosefbinica.spring.security.jwt.domains.Role;
 import com.gabriel.iosefbinica.spring.security.jwt.domains.User;
-
 import java.util.Set;
 
 public class UserWithRolesDTO {
