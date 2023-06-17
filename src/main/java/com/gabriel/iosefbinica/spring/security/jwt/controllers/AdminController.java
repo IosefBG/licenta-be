@@ -83,7 +83,7 @@ public class AdminController {
     }
 
     @DeleteMapping("/removeRoleForUserId")
-    public ResponseEntity<?> deleteRoleForUserId(@RequestParam Long userId, @RequestParam Integer roleId) {
+    public ResponseEntity<?> deleteRoleForUserId(@RequestParam Long userId, @RequestParam Long roleId) {
         adminService.deleteRoleForUserId(userId, roleId);
         return ResponseEntity.ok("Role deleted");
     }

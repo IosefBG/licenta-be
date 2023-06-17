@@ -274,7 +274,32 @@ public class UserService {
     }
 
 
+//    public ResponseEntity<?> getTimesheetByUserId(Long userId) {
+//        List<Timesheet> timesheets = timesheetRepository.findByUserId(userId);
+//
+//        if (timesheets.isEmpty()) {
+//            return ResponseEntity.noContent().build();
+//        }
+//
+//        return ResponseEntity.ok(timesheets);
+//    }
+    public ResponseEntity<?> getTimesheetByUserId(Long userId, String weekStartDate) {
+        // Calculate the end date of the week by adding 6 days to the start date
+        LocalDate parsedWeekStartDate = LocalDate.parse(weekStartDate);
+        LocalDate weekEndDate = parsedWeekStartDate.plusDays(6);
 
+        List<Timesheet> timesheets = timesheetRepository.findByUserIdAndDateRange(userId, parsedWeekStartDate, weekEndDate);
 
+        if (timesheets.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
 
+        return ResponseEntity.ok(timesheets);
+    }
+
+    public ResponseEntity<?> deleteTimesheetEntry(Long timesheetId) {
+        timesheetRepository.deleteById(timesheetId);
+
+        return ResponseEntity.ok().build();
+    }
 }

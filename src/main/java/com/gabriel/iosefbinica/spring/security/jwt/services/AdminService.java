@@ -111,7 +111,7 @@ public class AdminService {
         userRepository.save(user);
     }
 
-    public void deleteRoleForUserId(Long userId, Integer roleId) {
+    public void deleteRoleForUserId(Long userId, Long roleId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Error: User not found"));
 

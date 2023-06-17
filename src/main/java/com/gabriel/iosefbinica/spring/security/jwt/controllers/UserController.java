@@ -2,7 +2,7 @@ package com.gabriel.iosefbinica.spring.security.jwt.controllers;
 
 import com.gabriel.iosefbinica.spring.security.jwt.models.payload.request.LoginRequest;
 import com.gabriel.iosefbinica.spring.security.jwt.models.payload.request.SignupRequest;
-import com.gabriel.iosefbinica.spring.security.jwt.models.payload.request.TimesheetRequest;
+import com.gabriel.iosefbinica.spring.security.jwt.models.payload.request.putTimesheetRequest;
 import com.gabriel.iosefbinica.spring.security.jwt.services.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -46,7 +46,7 @@ public class UserController {
     }
 
     @PutMapping("/addTimesheet")
-    public ResponseEntity<?> addTimesheet(@RequestBody TimesheetRequest request) {
+    public ResponseEntity<?> addTimesheet(@RequestBody putTimesheetRequest request) {
         try {
             return userService.addTimesheet(request.getUserId(), request.getProjectId(), request.getSelectedDate(),
                     request.getHours(), request.getFromDate(), request.getToDate());
@@ -56,4 +56,24 @@ public class UserController {
         }
     }
 
+
+    @GetMapping("/getTimesheetByUserId")
+    public ResponseEntity<?> getTimesheetByUserId(@RequestParam Long userId, @RequestParam String weekStartDate) {
+        try {
+            return userService.getTimesheetByUserId(userId, weekStartDate);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred");
+        }
+    }
+
+    @DeleteMapping("/deleteTimesheetEntry")
+    public ResponseEntity<?> deleteTimesheetEntry(@RequestParam Long timesheetId) {
+        try {
+            return userService.deleteTimesheetEntry(timesheetId);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred");
+        }
+    }
 }

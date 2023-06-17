@@ -2,7 +2,7 @@ package com.gabriel.iosefbinica.spring.security.jwt.models.payload.request;
 
 import java.time.LocalDate;
 
-public class TimesheetRequest {
+public class putTimesheetRequest {
     private Long userId;
     private Long projectId;
     private String selectedDate;
