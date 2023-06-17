@@ -187,7 +187,7 @@ public class UserService {
     @Transactional
     public ResponseEntity<?> addTimesheet(Long userId, Long projectId, String selectedDate, Long hours, LocalDate fromDate, LocalDate toDate) {
         User user = userRepository.findById(userId).orElse(null);
-        UserProject project = userProjectRepository.findByProjectId(projectId).orElse(null);
+        UserProject project = userProjectRepository.findByProjectIdAndUserId(projectId, userId).orElse(null);
 
         if (user == null || project == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("User or project not found");
@@ -205,7 +205,7 @@ public class UserService {
 
             // Check if an existing timesheet entry exists for the same project, user, and date
             Timesheet existingEntry = timesheetRepository.findByUserAndProjectAndSelectedDate(user, project, LocalDate.parse(datePart)).orElse(null);
-            if (existingEntry != null) {
+            if (existingEntry != null && existingEntry.getProjectId() == project.getUserProjectId()) {
                 // Update the existing entry
                 existingEntry.setHours(hours);
                 existingEntry.setFromDate(LocalDate.parse(datePart));
@@ -274,15 +274,6 @@ public class UserService {
     }
 
 
-//    public ResponseEntity<?> getTimesheetByUserId(Long userId) {
-//        List<Timesheet> timesheets = timesheetRepository.findByUserId(userId);
-//
-//        if (timesheets.isEmpty()) {
-//            return ResponseEntity.noContent().build();
-//        }
-//
-//        return ResponseEntity.ok(timesheets);
-//    }
     public ResponseEntity<?> getTimesheetByUserId(Long userId, String weekStartDate) {
         // Calculate the end date of the week by adding 6 days to the start date
         LocalDate parsedWeekStartDate = LocalDate.parse(weekStartDate);

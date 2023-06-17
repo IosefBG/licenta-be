@@ -93,4 +93,7 @@ public class Timesheet {
 
     public void save(Timesheet timesheetEntry) {
     }
+    public Long getProjectId() {
+        return project != null ? project.getUserProjectId() : null;
+    }
 }
