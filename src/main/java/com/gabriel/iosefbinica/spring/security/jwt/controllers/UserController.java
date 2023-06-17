@@ -2,12 +2,14 @@ package com.gabriel.iosefbinica.spring.security.jwt.controllers;
 
 import com.gabriel.iosefbinica.spring.security.jwt.models.payload.request.LoginRequest;
 import com.gabriel.iosefbinica.spring.security.jwt.models.payload.request.SignupRequest;
+import com.gabriel.iosefbinica.spring.security.jwt.models.payload.request.TimesheetRequest;
 import com.gabriel.iosefbinica.spring.security.jwt.services.UserService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
-import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/user")
@@ -44,14 +46,14 @@ public class UserController {
     }
 
     @PutMapping("/addTimesheet")
-    public ResponseEntity<?> addTimesheet(@RequestParam Long userId,
-                                          @RequestParam Long projectId,
-                                          @RequestParam String selectedDate,
-                                          @RequestParam Long hours,
-                                          @RequestParam LocalDate fromDate,
-                                          @RequestParam LocalDate toDate,
-                                          @RequestParam LocalDate weekStartDay,
-                                          @RequestParam LocalDate weekEndDay) {
-        return userService.addTimesheet(userId, projectId, selectedDate,hours, fromDate, toDate, weekStartDay, weekEndDay);
+    public ResponseEntity<?> addTimesheet(@RequestBody TimesheetRequest request) {
+        try {
+            return userService.addTimesheet(request.getUserId(), request.getProjectId(), request.getSelectedDate(),
+                    request.getHours(), request.getFromDate(), request.getToDate());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred");
+        }
     }
+
 }

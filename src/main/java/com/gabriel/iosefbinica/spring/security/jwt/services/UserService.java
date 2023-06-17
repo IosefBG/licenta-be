@@ -7,10 +7,7 @@ import com.gabriel.iosefbinica.spring.security.jwt.models.payload.request.LoginR
 import com.gabriel.iosefbinica.spring.security.jwt.models.payload.request.SignupRequest;
 import com.gabriel.iosefbinica.spring.security.jwt.models.payload.response.MessageResponse;
 import com.gabriel.iosefbinica.spring.security.jwt.models.payload.response.UserInfoResponse;
-import com.gabriel.iosefbinica.spring.security.jwt.repository.ProjectRepository;
-import com.gabriel.iosefbinica.spring.security.jwt.repository.RoleRepository;
-import com.gabriel.iosefbinica.spring.security.jwt.repository.UserProjectRepository;
-import com.gabriel.iosefbinica.spring.security.jwt.repository.UserRepository;
+import com.gabriel.iosefbinica.spring.security.jwt.repository.*;
 import com.gabriel.iosefbinica.spring.security.jwt.security.jwt.JwtUtils;
 import com.gabriel.iosefbinica.spring.security.jwt.security.services.RefreshTokenService;
 import com.gabriel.iosefbinica.spring.security.jwt.security.services.UserDetailsImpl;
@@ -25,8 +22,12 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
 import javax.servlet.http.HttpServletRequest;
+import javax.transaction.Transactional;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -40,10 +41,11 @@ public class UserService {
     private final RefreshTokenService refreshTokenService;
     private final ProjectRepository projectRepository;
     private final UserProjectRepository userProjectRepository;
+    private final TimesheetRepository timesheetRepository;
 
     public UserService(AuthenticationManager authenticationManager, UserRepository userRepository,
                        RoleRepository roleRepository, PasswordEncoder encoder, JwtUtils jwtUtils,
-                       RefreshTokenService refreshTokenService, ProjectRepository projectRepository, UserProjectRepository userProjectRepository) {
+                       RefreshTokenService refreshTokenService, ProjectRepository projectRepository, UserProjectRepository userProjectRepository, TimesheetRepository timesheetRepository) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
@@ -52,6 +54,7 @@ public class UserService {
         this.refreshTokenService = refreshTokenService;
         this.projectRepository = projectRepository;
         this.userProjectRepository = userProjectRepository;
+        this.timesheetRepository = timesheetRepository;
     }
 
     public ResponseEntity<?> authenticateUser(LoginRequest loginRequest) {
@@ -181,29 +184,97 @@ public class UserService {
         return ResponseEntity.ok(projects);
     }
 
-    public ResponseEntity<?> addTimesheet(Long userId, Long projectId, String selectedDate,Long hours, LocalDate fromDate, LocalDate toDate, LocalDate weekStartDay, LocalDate weekEndDay) {
+    @Transactional
+    public ResponseEntity<?> addTimesheet(Long userId, Long projectId, String selectedDate, Long hours, LocalDate fromDate, LocalDate toDate) {
         User user = userRepository.findById(userId).orElse(null);
-        UserProject project = userProjectRepository.findById(projectId).orElse(null);
+        UserProject project = userProjectRepository.findByProjectId(projectId).orElse(null);
 
         if (user == null || project == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("User or project not found");
         }
 
-        Timesheet timesheetEntry = new Timesheet();
-        timesheetEntry.setUser(user);
-        timesheetEntry.setProject(project);
-        timesheetEntry.setSelectedDate(LocalDate.parse(selectedDate));
-        timesheetEntry.setHours(hours);
-        timesheetEntry.setFromDate(fromDate);
-        timesheetEntry.setToDate(toDate);
-        timesheetEntry.setWeekStartDay(weekStartDay);
-        timesheetEntry.setWeekEndDay(weekEndDay);
+        // Check if the selectedDate is within the specified week
+        if ((fromDate != null && selectedDate != null && fromDate.isAfter(LocalDate.parse(selectedDate))) ||
+                (toDate != null && selectedDate != null && toDate.isBefore(LocalDate.parse(selectedDate)))) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Selected date is outside the specified week");
+        }
 
-        // Set the default status as needed
-        timesheetEntry.setStatus("Pending");
+        // Handle the case when a single day is selected
+        if (selectedDate != null) {
+            String datePart = selectedDate.split("T")[0];
 
-        timesheetEntry.save(timesheetEntry);
+            // Check if an existing timesheet entry exists for the same project, user, and date
+            Timesheet existingEntry = timesheetRepository.findByUserAndProjectAndSelectedDate(user, project, LocalDate.parse(datePart)).orElse(null);
+            if (existingEntry != null) {
+                // Update the existing entry
+                existingEntry.setHours(hours);
+                existingEntry.setFromDate(LocalDate.parse(datePart));
+                existingEntry.setToDate(LocalDate.parse(datePart));
 
-        return ResponseEntity.status(HttpStatus.CREATED).body("Timesheet entry created successfully");
+                timesheetRepository.save(existingEntry);
+
+                return ResponseEntity.status(HttpStatus.OK).body(existingEntry);
+            } else {
+                // Create a new entry
+                Timesheet timesheetEntry = new Timesheet();
+                timesheetEntry.setUser(user);
+                timesheetEntry.setProject(project);
+                timesheetEntry.setSelectedDate(LocalDate.parse(datePart));
+                timesheetEntry.setHours(hours);
+                timesheetEntry.setFromDate(LocalDate.parse(datePart));
+                timesheetEntry.setToDate(LocalDate.parse(datePart));
+
+                // Set the default status as needed
+                timesheetEntry.setStatus("Init");
+
+                timesheetRepository.save(timesheetEntry);
+
+                return ResponseEntity.status(HttpStatus.CREATED).body(timesheetEntry);
+            }
+        }
+
+        // Handle the case when a period is selected
+        if (fromDate != null && toDate != null) {
+            // Validate that the fromDate and toDate fall within the same week
+            LocalDate startOfWeekFrom = fromDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+            LocalDate startOfWeekTo = toDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+            if (!startOfWeekFrom.equals(startOfWeekTo)) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid period. The fromDate and toDate must be within the same week");
+            }
+
+            // Remove the existing timesheet entries within the period if they exist
+            timesheetRepository.deleteByUserAndProjectAndSelectedDateBetween(user, project, fromDate, toDate);
+
+            // Iterate over the dates in the selected period and create timesheet entries for each date
+            LocalDate currentDate = fromDate;
+            List<Timesheet> timesheetEntries = new ArrayList<>();
+            while (!currentDate.isAfter(toDate)) {
+                Timesheet timesheetEntry = new Timesheet();
+                timesheetEntry.setUser(user);
+                timesheetEntry.setProject(project);
+                timesheetEntry.setSelectedDate(currentDate);
+                timesheetEntry.setHours(hours);
+                timesheetEntry.setFromDate(fromDate);
+                timesheetEntry.setToDate(toDate);
+
+                // Set the default status as needed
+                timesheetEntry.setStatus("Init");
+
+                timesheetRepository.save(timesheetEntry);
+                timesheetEntries.add(timesheetEntry);
+
+                currentDate = currentDate.plusDays(1);
+            }
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(timesheetEntries);
+        }
+
+        // If neither a day nor a period is selected, return a bad request response
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid timesheet selection");
     }
+
+
+
+
+
 }

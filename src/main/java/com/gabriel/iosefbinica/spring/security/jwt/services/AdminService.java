@@ -144,12 +144,19 @@ public class AdminService {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("ErrorMessage.PROJECT_NOT_FOUND"));
 
+        // Check if the user is already added to the project
+        UserProject existingUserProject = userProjectRepository.findByUserAndProject(user, project);
+        if (existingUserProject != null) {
+            throw new RuntimeException("ErrorMessage.USER_ALREADY_ADDED");
+        }
+
         UserProject userProject = new UserProject();
         userProject.setUser(user);
         userProject.setProject(project);
 
         return userProjectRepository.save(userProject);
     }
+
 
 
     public List<UserProject> getUsersProjects() {

@@ -25,10 +25,6 @@ public class Timesheet {
 
     private LocalDate toDate;
 
-    private LocalDate weekStartDay;
-
-    private LocalDate weekEndDay;
-
     private String status;
 
     public Long getId() {
@@ -85,22 +81,6 @@ public class Timesheet {
 
     public void setToDate(LocalDate toDate) {
         this.toDate = toDate;
-    }
-
-    public LocalDate getWeekStartDay() {
-        return weekStartDay;
-    }
-
-    public void setWeekStartDay(LocalDate weekStartDay) {
-        this.weekStartDay = weekStartDay;
-    }
-
-    public LocalDate getWeekEndDay() {
-        return weekEndDay;
-    }
-
-    public void setWeekEndDay(LocalDate weekEndDay) {
-        this.weekEndDay = weekEndDay;
     }
 
     public String getStatus() {
