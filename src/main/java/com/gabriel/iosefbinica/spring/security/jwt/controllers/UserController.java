@@ -76,4 +76,14 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred");
         }
     }
+
+    @PostMapping("/updateTimesheetEntry")
+    public ResponseEntity<?> updateTimesheetEntry(@RequestParam  Long userId,@RequestParam String status, @RequestParam String startWeek, @RequestParam String endWeek) {
+        try {
+            return userService.updateTimesheetEntry(userId, status, startWeek, endWeek);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred");
+        }
+    }
 }

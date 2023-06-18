@@ -225,7 +225,7 @@ public class UserService {
                 timesheetEntry.setToDate(LocalDate.parse(datePart));
 
                 // Set the default status as needed
-                timesheetEntry.setStatus("Init");
+                timesheetEntry.setStatus("Initializat");
 
                 timesheetRepository.save(timesheetEntry);
 
@@ -292,5 +292,23 @@ public class UserService {
         timesheetRepository.deleteById(timesheetId);
 
         return ResponseEntity.ok().build();
+    }
+
+    public ResponseEntity<?> updateTimesheetEntry(Long userId, String status, String startWeek, String endWeek) {
+        LocalDate startDate = LocalDate.parse(startWeek);
+        LocalDate endDate = LocalDate.parse(endWeek);
+
+        // Fetch timesheet entries based on the specified conditions
+        List<Timesheet> timesheetEntries = timesheetRepository.findByUserIdAndToDateBetween(userId, startDate, endDate);
+
+        // Update the status for each timesheet entry
+        for (Timesheet entry : timesheetEntries) {
+            entry.setStatus(status);
+        }
+
+        // Save the updated timesheet entries
+        timesheetRepository.saveAll(timesheetEntries);
+
+        return ResponseEntity.ok("Timesheet entries updated successfully.");
     }
 }

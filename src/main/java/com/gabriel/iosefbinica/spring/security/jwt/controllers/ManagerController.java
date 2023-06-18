@@ -1,24 +1,32 @@
 package com.gabriel.iosefbinica.spring.security.jwt.controllers;
 
-import com.gabriel.iosefbinica.spring.security.jwt.domains.User;
-import com.gabriel.iosefbinica.spring.security.jwt.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.gabriel.iosefbinica.spring.security.jwt.domains.Timesheet;
+import com.gabriel.iosefbinica.spring.security.jwt.models.dtos.WeeklySummaryDTO;
+import com.gabriel.iosefbinica.spring.security.jwt.services.ManagerService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/manager")
 @PreAuthorize("hasRole('MANAGER') or hasRole('ADMIN')")
 public class ManagerController {
 
-    @Autowired
-    UserRepository userRepository;
 
-    @GetMapping("/users") // GET: http://localhost:8080/api/manager/users
-    public ResponseEntity<?> getAllUsers() {
-        List<User> users = userRepository.findAll();
-        return ResponseEntity.ok(users);
+    ManagerService managerService;
+
+    public ManagerController(ManagerService managerService) {
+        this.managerService = managerService;
     }
+
+    @GetMapping("/users")
+    public ResponseEntity<List<Timesheet>> getAllUsers() {
+        return ResponseEntity.ok().body(this.managerService.findSummaryAll());
+    }
+
 }
