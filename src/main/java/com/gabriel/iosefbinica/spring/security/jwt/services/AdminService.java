@@ -1,18 +1,19 @@
 package com.gabriel.iosefbinica.spring.security.jwt.services;
 
-import com.gabriel.iosefbinica.spring.security.jwt.domains.Project;
-import com.gabriel.iosefbinica.spring.security.jwt.domains.Role;
-import com.gabriel.iosefbinica.spring.security.jwt.domains.User;
-import com.gabriel.iosefbinica.spring.security.jwt.domains.UserProject;
+import com.gabriel.iosefbinica.spring.security.jwt.domains.*;
 import com.gabriel.iosefbinica.spring.security.jwt.models.ERole;
 import com.gabriel.iosefbinica.spring.security.jwt.models.dtos.UserWithMissingRoles;
 import com.gabriel.iosefbinica.spring.security.jwt.models.dtos.UserWithRolesDTO;
-import com.gabriel.iosefbinica.spring.security.jwt.repository.ProjectRepository;
-import com.gabriel.iosefbinica.spring.security.jwt.repository.RoleRepository;
-import com.gabriel.iosefbinica.spring.security.jwt.repository.UserProjectRepository;
-import com.gabriel.iosefbinica.spring.security.jwt.repository.UserRepository;
+import com.gabriel.iosefbinica.spring.security.jwt.repository.*;
+import org.apache.poi.ss.usermodel.RichTextString;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
-
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -24,13 +25,16 @@ public class AdminService {
     private final ProjectRepository projectRepository;
     private final RoleRepository roleRepository;
     private final UserProjectRepository userProjectRepository;
+    private final TimesheetRepository timesheetRepository;
 
     public AdminService(UserRepository userRepository, ProjectRepository projectRepository,
-                        RoleRepository roleRepository, UserProjectRepository userProjectRepository) {
+                        RoleRepository roleRepository, UserProjectRepository userProjectRepository,
+                        TimesheetRepository timesheetRepository) {
         this.userRepository = userRepository;
         this.projectRepository = projectRepository;
         this.roleRepository = roleRepository;
         this.userProjectRepository = userProjectRepository;
+        this.timesheetRepository = timesheetRepository;
     }
 
     public List<User> getAllUsers() {
@@ -158,9 +162,62 @@ public class AdminService {
     }
 
 
-
     public List<UserProject> getUsersProjects() {
         return userProjectRepository.findAll();
+    }
+
+    public byte[] generateTimesheetReport(LocalDate fromDate, LocalDate toDate) throws IOException {
+        List<Timesheet> timesheets = retrieveTimesheets(fromDate, toDate);
+
+        Workbook workbook = generateTimesheetWorkbook(timesheets);
+
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        workbook.write(outputStream);
+        workbook.close();
+
+        return outputStream.toByteArray();
+    }
+
+    private List<Timesheet> retrieveTimesheets(LocalDate fromDate, LocalDate toDate) {
+        return timesheetRepository.findBySelectedDateBetween(fromDate, toDate);
+    }
+
+    private Workbook generateTimesheetWorkbook(List<Timesheet> timesheets) {
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("Timesheets");
+
+        // Create header row
+        Row headerRow = sheet.createRow(0);
+        headerRow.createCell(0).setCellValue("ID");
+        headerRow.createCell(1).setCellValue("User Name");
+        headerRow.createCell(2).setCellValue("User Email");
+        headerRow.createCell(3).setCellValue("User Id");
+        headerRow.createCell(4).setCellValue("Project Name");
+        headerRow.createCell(5).setCellValue("Project Manager");
+        headerRow.createCell(6).setCellValue("Hours");
+        headerRow.createCell(7).setCellValue("Selected Date");
+        headerRow.createCell(8).setCellValue("From Date");
+        headerRow.createCell(9).setCellValue("To Date");
+        headerRow.createCell(10).setCellValue("Status");
+
+        // Populate data rows
+        int rowNum = 1;
+        for (Timesheet timesheet : timesheets) {
+            Row row = sheet.createRow(rowNum++);
+            row.createCell(0).setCellValue(timesheet.getId());
+            row.createCell(1).setCellValue(timesheet.getUser().getUsername());
+            row.createCell(2).setCellValue(timesheet.getUser().getEmail());
+            row.createCell(3).setCellValue(timesheet.getUser().getId());
+            row.createCell(4).setCellValue(timesheet.getProject().getProject().getProjectName());
+            row.createCell(5).setCellValue(timesheet.getProject().getProject().getManager().getUsername());
+            row.createCell(6).setCellValue(timesheet.getHours());
+            row.createCell(7).setCellValue(timesheet.getSelectedDate().toString());
+            row.createCell(8).setCellValue(timesheet.getFromDate().toString());
+            row.createCell(9).setCellValue(timesheet.getToDate().toString());
+            row.createCell(10).setCellValue(timesheet.getStatus());
+        }
+
+        return workbook;
     }
 
 }

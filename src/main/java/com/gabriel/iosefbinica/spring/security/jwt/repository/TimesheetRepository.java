@@ -25,6 +25,8 @@ public interface TimesheetRepository extends JpaRepository<Timesheet, Long> {
     );
 
     List<Timesheet> findByUserIdAndToDateBetween(Long userId, LocalDate startDate, LocalDate endDate);
+
+    List<Timesheet> findBySelectedDateBetween(LocalDate fromDate, LocalDate toDate);
 }
 
 

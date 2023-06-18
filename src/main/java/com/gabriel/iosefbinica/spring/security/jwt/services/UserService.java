@@ -18,10 +18,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.transaction.Transactional;
@@ -33,6 +35,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class UserService {
+    private final int MAX_LOGIN_ATTEMPTS;
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
@@ -45,7 +48,9 @@ public class UserService {
 
     public UserService(AuthenticationManager authenticationManager, UserRepository userRepository,
                        RoleRepository roleRepository, PasswordEncoder encoder, JwtUtils jwtUtils,
-                       RefreshTokenService refreshTokenService, ProjectRepository projectRepository, UserProjectRepository userProjectRepository, TimesheetRepository timesheetRepository) {
+                       RefreshTokenService refreshTokenService, ProjectRepository projectRepository,
+                       UserProjectRepository userProjectRepository, TimesheetRepository timesheetRepository,
+                       @Value("${app.login.max-attempts}") int maxAttempts) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
@@ -55,35 +60,61 @@ public class UserService {
         this.projectRepository = projectRepository;
         this.userProjectRepository = userProjectRepository;
         this.timesheetRepository = timesheetRepository;
+        this.MAX_LOGIN_ATTEMPTS = maxAttempts;
     }
+
 
     public ResponseEntity<?> authenticateUser(LoginRequest loginRequest) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword())
-        );
+        // Check if the user already failed to login
+        User user = userRepository.findByUsername(loginRequest.getUsername()).orElse(null);
+        if (user != null && user.getLoginAttempts() >= MAX_LOGIN_ATTEMPTS) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new MessageResponse("Your account has been locked. Please contact the administrator."));
+        }
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword())
+            );
 
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+            SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        ResponseCookie jwtCookie = jwtUtils.generateJwtCookie(userDetails);
+            UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
-        List<String> roles = userDetails.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.toList());
+            ResponseCookie jwtCookie = jwtUtils.generateJwtCookie(userDetails);
 
-        RefreshToken refreshToken = refreshTokenService.createRefreshToken(userDetails.getId());
+            List<String> roles = userDetails.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .collect(Collectors.toList());
 
-        ResponseCookie jwtRefreshCookie = jwtUtils.generateRefreshJwtCookie(refreshToken.getToken());
+            RefreshToken refreshToken = refreshTokenService.createRefreshToken(userDetails.getId());
 
-        UserInfoResponse userInfoResponse = new UserInfoResponse(userDetails.getId(), userDetails.getUsername(),
-                userDetails.getEmail(), roles);
+            ResponseCookie jwtRefreshCookie = jwtUtils.generateRefreshJwtCookie(refreshToken.getToken());
 
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
-                .header(HttpHeaders.SET_COOKIE, jwtRefreshCookie.toString())
-                .body(userInfoResponse);
+            UserInfoResponse userInfoResponse = new UserInfoResponse(userDetails.getId(), userDetails.getUsername(),
+                    userDetails.getEmail(), roles, userDetails.getLoginAttempts());
+
+            // Reset failed login attempts to 0 for successful login
+            if (user != null) {
+                user.setLoginAttempts(0);
+                userRepository.save(user);
+            }
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
+                    .header(HttpHeaders.SET_COOKIE, jwtRefreshCookie.toString())
+                    .body(userInfoResponse);
+        } catch (AuthenticationException e) {
+            if (user != null) {
+                int loginAttempts = user.getLoginAttempts();
+                user.setLoginAttempts(loginAttempts + 1);
+                userRepository.save(user);
+            }
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new MessageResponse("Invalid username or password."));
+        }
     }
+
 
     public ResponseEntity<?> registerUser(SignupRequest signUpRequest) {
         if (userRepository.existsByUsername(signUpRequest.getUsername())) {
@@ -133,11 +164,20 @@ public class UserService {
 
     public ResponseEntity<?> logoutUser() {
         try {
-            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated()) {
+                Object principal = authentication.getPrincipal();
 
-            if (!Objects.equals(principal.toString(), "anonymousUser")) {
-                Long userId = ((UserDetailsImpl) principal).getId();
-                refreshTokenService.deleteByUserId(userId);
+                if (principal instanceof UserDetailsImpl) {
+                    Long userId = ((UserDetailsImpl) principal).getId();
+                    User user = userRepository.findById(userId).orElse(null);
+                    if (user != null) {
+                        user.setLoginAttempts(0); // Reset loginAttempts to 0
+                        userRepository.save(user);
+                    }
+
+                    refreshTokenService.deleteByUserId(userId);
+                }
             }
 
             ResponseCookie jwtCookie = jwtUtils.getCleanJwtCookie();
@@ -151,6 +191,7 @@ public class UserService {
             return ResponseEntity.badRequest().body(new MessageResponse("Error: " + e.getMessage()));
         }
     }
+
 
     public ResponseEntity<?> refreshToken(HttpServletRequest request) {
         String refreshToken = jwtUtils.getJwtRefreshFromCookies(request);

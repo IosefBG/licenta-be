@@ -1,14 +1,22 @@
 package com.gabriel.iosefbinica.spring.security.jwt.controllers;
 
 import com.gabriel.iosefbinica.spring.security.jwt.domains.Project;
+import com.gabriel.iosefbinica.spring.security.jwt.domains.Timesheet;
 import com.gabriel.iosefbinica.spring.security.jwt.domains.User;
 import com.gabriel.iosefbinica.spring.security.jwt.domains.UserProject;
 import com.gabriel.iosefbinica.spring.security.jwt.models.dtos.UserWithMissingRoles;
 import com.gabriel.iosefbinica.spring.security.jwt.models.dtos.UserWithRolesDTO;
 import com.gabriel.iosefbinica.spring.security.jwt.services.AdminService;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.io.IOException;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -99,5 +107,27 @@ public class AdminController {
         List<UserProject> usersProjects = adminService.getUsersProjects();
         return ResponseEntity.ok(usersProjects);
     }
+
+    @GetMapping("/generateRaporttimesheets")
+    public ResponseEntity<byte[]> generateTimesheetReport(
+            @RequestParam(name = "fromDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(name = "toDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate
+    ) {
+        try {
+            byte[] reportBytes = adminService.generateTimesheetReport(fromDate, toDate);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+            headers.setContentDispositionFormData("attachment", "timesheet_report.xlsx");
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(reportBytes);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
 
 }

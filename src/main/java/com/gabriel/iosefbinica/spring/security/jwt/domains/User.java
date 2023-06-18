@@ -33,6 +33,8 @@ public class User {
   @JsonIgnore
   private String password;
 
+  private Integer loginAttempts;
+
   @ManyToMany(fetch = FetchType.LAZY)
   @JoinTable(name = "user_roles", 
              joinColumns = @JoinColumn(name = "user_id"),
@@ -46,6 +48,7 @@ public class User {
     this.username = username;
     this.email = email;
     this.password = password;
+    this.loginAttempts = 0;
   }
 
   public Long getId() {
@@ -78,6 +81,14 @@ public class User {
 
   public void setPassword(String password) {
     this.password = password;
+  }
+
+  public Integer getLoginAttempts() {
+    return loginAttempts;
+  }
+
+  public void setLoginAttempts(Integer loginAttempts) {
+    this.loginAttempts = loginAttempts;
   }
 
   public Set<Role> getRoles() {
