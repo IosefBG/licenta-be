@@ -6,7 +6,6 @@ import com.gabriel.iosefbinica.spring.security.jwt.domains.UserProject;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -24,7 +23,11 @@ public interface TimesheetRepository extends JpaRepository<Timesheet, Long> {
             @Param("weekEndDate") LocalDate weekEndDate
     );
 
-    List<Timesheet> findByUserIdAndToDateBetween(Long userId, LocalDate startDate, LocalDate endDate);
+//    @Query("SELECT t FROM Timesheet t WHERE t.user.id = :userId")
+//    List<Timesheet> findByUserIdAndToDateBetween(@Param("userId") Long userId);
+
+    @Query("SELECT t FROM Timesheet t WHERE t.user.id = :userId AND t.selectedDate BETWEEN :startDate AND :endDate")
+    List<Timesheet> findByUserIdAndToDateBetween(@Param("userId") Long userId, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
 
     List<Timesheet> findBySelectedDateBetween(LocalDate fromDate, LocalDate toDate);
 }

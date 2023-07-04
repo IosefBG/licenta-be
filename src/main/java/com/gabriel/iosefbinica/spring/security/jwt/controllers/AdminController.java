@@ -78,17 +78,19 @@ public class AdminController {
         return ResponseEntity.ok(usersWithMissingRoles);
     }
 
+    @GetMapping("/getUsersWithRoles")
+    public ResponseEntity<List<UserWithRolesDTO>> getUsersWithRoles() {
+        List<UserWithRolesDTO> usersWithRoles = adminService.getUsersWithRoles();
+        return ResponseEntity.ok(usersWithRoles);
+    }
+
     @PutMapping("/addRoleForUserId")
     public ResponseEntity<?> addRoleForUserId(@RequestParam Long userId, @RequestParam Integer roleId) {
         adminService.addRoleForUserId(userId, roleId);
         return ResponseEntity.ok("Role added");
     }
 
-    @GetMapping("/getUsersWithRoles")
-    public ResponseEntity<List<UserWithRolesDTO>> getUsersWithRoles() {
-        List<UserWithRolesDTO> usersWithRoles = adminService.getUsersWithRoles();
-        return ResponseEntity.ok(usersWithRoles);
-    }
+
 
     @DeleteMapping("/removeRoleForUserId")
     public ResponseEntity<?> deleteRoleForUserId(@RequestParam Long userId, @RequestParam Long roleId) {

@@ -16,4 +16,5 @@ public interface RoleRepository extends JpaRepository<Role, Long> {
   Optional<Role> findById(Integer roleId);
 
   List<Role> findMissingRolesById(Long id);
+
 }

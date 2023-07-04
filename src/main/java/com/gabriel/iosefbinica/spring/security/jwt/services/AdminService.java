@@ -14,10 +14,8 @@ import org.springframework.stereotype.Service;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class AdminService {
@@ -96,13 +94,20 @@ public class AdminService {
         List<UserWithMissingRoles> usersWithMissingRoles = new ArrayList<>();
 
         for (User user : users) {
-            List<Role> missingRoles = roleRepository.findMissingRolesById(user.getId());
+            List<Role> allRoles = roleRepository.findAll();
+            Set<Role> userRoles = user.getRoles();
+
+            List<Role> missingRoles = allRoles.stream()
+                    .filter(role -> !userRoles.contains(role))
+                    .collect(Collectors.toList());
+
             UserWithMissingRoles userWithMissingRoles = new UserWithMissingRoles(user, missingRoles);
             usersWithMissingRoles.add(userWithMissingRoles);
         }
 
         return usersWithMissingRoles;
     }
+
 
     public void addRoleForUserId(Long userId, Integer roleId) {
         User user = userRepository.findById(userId)

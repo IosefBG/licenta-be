@@ -7,10 +7,10 @@
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
 		<version>2.7.3</version>
-		<relativePath /> <!-- lookup parent from repository -->
+		<relativePath />
 	</parent>
 	<groupId>com.gabriel.iosefbinica</groupId>
-	<artifactId>spring-security-refresh-token</artifactId>
+	<artifactId>pontaj-simplu</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>Pontaj Simplu</name>
 	<description>Backend pentru o aplicatie de pontare</description>
